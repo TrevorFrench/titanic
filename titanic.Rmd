@@ -1,0 +1,90 @@
+---
+title: "Titanic with XGBoost in R"
+output: html_notebook
+---
+
+# Libraries
+
+```{r}
+library(xgboost)
+library(dplyr)
+```
+
+# Data
+
+```{r}
+train <- read.csv("./input/train.csv")
+train_labels <- train$Survived
+head(train)
+```
+# Cleaning
+
+```{r}
+train$Male <- ifelse(train$Sex == "male", 1, 0)
+train$Female <- ifelse(train$Sex == "female", 1, 0)
+train$EmbarkedS <- ifelse(train$Embarked == "S", 1, 0)
+train$EmbarkedC <- ifelse(train$Embarked == "C", 1, 0)
+train$EmbarkedQ <- ifelse(train$Embarked == "Q", 1, 0)
+train <-
+  subset(
+    train,
+    select = c(
+      Pclass,
+      Age,
+      SibSp,
+      Parch,
+      Fare,
+      Male,
+      Female,
+      EmbarkedS,
+      EmbarkedC,
+      EmbarkedQ
+    )
+  )
+head(train)
+```
+```{r}
+train <- data.matrix(train)
+head(train)
+```
+
+```{r}
+bst <- xgboost(data = train, label = train_labels, max.depth = 17, eta = 1, nrounds = 50,
+               nthread = 2, objective = "binary:logistic")
+```
+
+```{r}
+test <- read.csv("./input/test.csv")
+passengerIds <- test$PassengerId
+test$Male <- ifelse(test$Sex == "male", 1, 0)
+test$Female <- ifelse(test$Sex == "female", 1, 0)
+test$EmbarkedS <- ifelse(test$Embarked == "S", 1, 0)
+test$EmbarkedC <- ifelse(test$Embarked == "C", 1, 0)
+test$EmbarkedQ <- ifelse(test$Embarked == "Q", 1, 0)
+test <- data.matrix(test)
+test <-
+  subset(
+    test,
+    select = c(
+      Pclass,
+      Age,
+      SibSp,
+      Parch,
+      Fare,
+      Male,
+      Female,
+      EmbarkedS,
+      EmbarkedC,
+      EmbarkedQ
+    )
+  )
+pred <- predict(bst, test)
+Survived <- round(pred)
+predictions <- data.frame(Survived)
+# head(predictions)
+# predictions <- rename(predictions, "Survived" = "pred")
+# predictions$Survived <- survived
+predictions$PassengerId <- passengerIds
+write.csv(predictions, "./output/predictions.csv", row.names = F)
+```
+
